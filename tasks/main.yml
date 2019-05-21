@@ -1,0 +1,5 @@
+---
+
+- include_tasks: ca_item.yml
+  loop: "{{ pki_ca_certificates }}"
+

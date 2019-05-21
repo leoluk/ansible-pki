@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+# OpenSSL config used to generate CA
+
+[ req ]
+default_bits           = 4096
+dirstring_type         = nobmp
+default_md             = sha256
+
+distinguished_name     = req_distinguished_name
+req_extensions         = v3_ca
+
+prompt = no
+
+[ v3_ca ]
+basicConstraints        = critical, CA:TRUE
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid:always,issuer:always
+keyUsage                = critical, cRLSign, digitalSignature, keyCertSign
+{% if item.name_constraint %}
+nameConstraints         = critical,permitted;{{ item.name_constraint }}
+{% endif %}
+
+[ req_distinguished_name ]
+CN = {{ item.common_name }}
+O = {{ item.organization }}
+OU = {{ item.organizational_unit }}

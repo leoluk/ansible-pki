@@ -1,0 +1,48 @@
+---
+
+- name: Create PKI path
+  file:
+    path: "{{ pki_path }}/{{ item.name }}/certs"
+    state: directory
+
+- name: Create CRL path
+  file:
+    path: "{{ pki_path }}/{{ item.name }}/crl"
+    state: directory
+
+- name: Template openssl.conf
+  template:
+    src: openssl.ca.conf.j2
+    dest: "{{ pki_path }}/{{ item.name }}/openssl.conf"
+
+- name: Create index.txt
+  copy:
+    content: ''
+    dest: "{{ pki_path }}/{{ item.name }}/index.txt"
+    force: no
+
+- name: Create serial file
+  copy:
+    content: '01\n'
+    dest: "{{ pki_path }}/{{ item.name }}/serial"
+    force: no
+
+- name: Create CA key
+  command: openssl genrsa -out {{ item.name }}.key 4096
+  args:
+    chdir: "{{ pki_path }}/{{ item.name }}"
+    creates: "{{ pki_path }}/{{ item.name }}/{{ item.name }}.key"
+
+- name: Create CA certificate
+  command: >
+    openssl req -x509 -new -config openssl.conf -nodes -key {{ item.name }}.key -sha256
+    -days {{ item.expiration_days }} -out {{ item.name }}.crt -extensions v3_ca
+  args:
+    chdir: "{{ pki_path }}/{{ item.name }}"
+    creates: "{{ pki_path }}/{{ item.name }}/{{ item.name }}.crt"
+
+- name: Sign certificates
+  include_tasks: sign.yml
+  loop: "{{ item.certificates }}"
+  loop_control:
+    loop_var: cert

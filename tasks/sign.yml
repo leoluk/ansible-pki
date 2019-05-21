@@ -1,0 +1,38 @@
+---
+
+- name: Create certificate path for {{ cert.name }}
+  file:
+    path: "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}"
+    state: directory
+
+- name: Template openssl.conf
+  template:
+    src: openssl.sign.conf.j2
+    dest: "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/openssl.conf"
+
+- name: Generate CSR
+  command: >
+    openssl req -new -newkey rsa:4096
+    -nodes -keyout "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/key.pem"
+    -out "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/csr.pem"
+    -config "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/openssl.conf"
+  args:
+    creates: "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/csr.pem"
+
+- name: Sign certificate using our CA
+  command: >
+    openssl ca -extensions v3_ca -batch
+    -in "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/csr.pem"
+    -out "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/cert.pem"
+    -outdir "{{ pki_path }}/{{ item.name }}/certs"
+    -config "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/openssl.conf"
+  args:
+    creates: "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/cert.pem"
+
+- name: Generate fullchain.pem
+  shell: >
+    cat "{{ pki_path }}/{{ item.name }}/{{ item.name }}.crt"
+    "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/cert.pem" >
+    "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/fullchain.pem"
+  args:
+    creates: "{{ pki_path }}/{{ item.name }}/certs/{{ cert.name }}/fullchain.pem"

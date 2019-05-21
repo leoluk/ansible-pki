@@ -1,0 +1,68 @@
+# {{ ansible_managed }}
+# OpenSSL config used to generate certificate
+
+[ ca ]
+default_ca = custom_ca
+
+[ custom_ca ]
+dir = {{ pki_path }}/{{ item.name }}
+certs = $dir/certs
+crl = crl/crl.pem
+database = $dir/index.txt
+serial = $dir/serial
+
+certificate = $dir/{{ item.name }}.crt
+private_key = $dir/{{ item.name }}.key
+
+RANDFILE = .rand
+
+default_days = {{ cert.expiration }}
+default_crl_days = 30
+default_md = sha256
+preserve = no
+
+email_in_dn = no
+
+copy_extensions = copy
+
+unique_subject = no
+
+policy = policy_anything
+
+[ policy_anything ]
+countryName             = optional
+stateOrProvinceName     = optional
+localityName            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ v3_ca ]
+
+[ req ]
+default_bits           = 4096
+dirstring_type         = nobmp
+default_md             = sha256
+
+distinguished_name     = req_distinguished_name
+req_extensions         = v3_req
+
+prompt = no
+
+[ req_distinguished_name ]
+C = DE
+CN = {{ cert.common_name }}
+
+[ v3_req ]
+basicConstraints = critical, CA:FALSE
+keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = @alt_names
+
+[ alt_names ]
+{% for san in cert.san_dns|default() %}
+DNS.{{ loop.index }} = {{ san }}
+{% endfor %}
+{% for san in cert.san_ip|default() %}
+IP.{{ loop.index }} = {{ san }}
+{% endfor %}
